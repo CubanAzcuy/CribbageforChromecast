@@ -1,0 +1,778 @@
+
+
+
+<!--
+Copyright (C) 2014 Google Inc. All Rights Reserved.
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+http://www.apache.org/licenses/LICENSE-2.0
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+-->
+<!DOCTYPE html>
+<html>
+<head>
+    <script type="text/javascript" src="https://www.gstatic.com/cast/sdk/libs/receiver/2.0.0/cast_receiver.js"></script>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js"></script>
+    <style type="text/css">
+        body {
+            overflow:hidden;
+            width:1280px;
+            height:720px;
+        }
+        .cardPlayerOne{
+            margin-top: 100px;
+            margin-left: 150px;
+            transform: rotate(0deg);
+        }
+        .cardPlayerTwo{
+            margin-top: 120px;
+            margin-left: 550px;
+            transform: rotate(0deg);
+        }
+        .cardCut{
+            margin-top: 120px;
+            margin-left: 900px;
+        }
+        .card{
+            height:350PX;
+            width:275PX;
+            border:0px solid silver;
+            display: table-cell;
+            vertical-align:middle;
+            color:#FFFFFF;
+            background-color:#220000;
+            font-weight:bold;
+            font-family:Verdana, Geneva, sans-serif;
+            font-size:40px;
+            position: absolute;
+            z-index:1;
+            box-shadow: 3px 3px 1px #888888;
+            border-width:3px;
+            border-color: #ff0ff0;
+        }
+        #backBackground {
+            width:1280PX;
+            height:720PX;
+            background-color:#996633;
+            z-index:-1;
+        }
+        #frontBackground {
+            width:1170PX;
+            margin-left:50px;
+            height:640PX;
+            margin-top:40px;
+            background-color:#33CC33;
+            position:absolute;
+            z-index:0;
+        }
+        #playScore {
+            position: absolute;
+            margin-left: 100px;
+            margin-top: 600px;
+        //background-color:#ffffff;
+            z-index:1;
+        }
+        #playerTurn {
+            position: absolute;
+            margin-left: 400px;
+            margin-top: 600px;
+        //background-color:#ffffff;
+            z-index:1;
+        }
+        #playerOneScore {
+            position:absolute;
+            margin-left: 900px;
+            margin-top: 580px;
+            z-index:1;
+        }
+        #playerTwoScore {
+            position:absolute;
+            margin-left: 900px;
+            margin-top: 610px;
+            z-index:1;
+        }
+        #cutCardLabel {
+            position:absolute;
+            margin-left: 980px;
+            margin-top: 70px;
+            z-index:1;
+        }
+    </style>
+    <title>Cast Hello Text</title>
+</head>
+<body>
+
+<DIV id="main">
+    <DIV id="cards">
+
+    </DIV>
+    <DIV id = "playScore">
+        <h3>Current Score: 0</h3>
+    </DIV>
+    <DIV id = "playerTurn">
+        <h3>Current player: asdf</h3>
+    </DIV>
+    <DIV id = "playerOneScore">
+        <h3>Player One: asdf</h3>
+    </DIV>
+    <DIV id = "playerTwoScore">
+        <h3>Player Two: asdf</h3>
+    </DIV>
+
+    <DIV id="frontBackground"></DIV>
+    <DIV id="backBackground"></DIV>
+    <br>
+</DIV>
+
+
+<script type="text/javascript">
+    //json, id, sendId
+    function Player(){
+        var me = this;
+        var hand = [];
+        var color;
+        var name;
+        var id;
+        var played;
+        var senderId;
+
+        this.setName = function(){
+            name = arguments[0];
+        }
+
+        this.setPlayed = function(){
+            name = arguments[0];
+        }
+
+        this.setColor = function(){
+            color = arguments[0];
+        }
+
+        this.playCard = function(card) {
+            var idx = hand.indexOf(card);
+            if (idx !== -1) {
+                hand.splice(idx, 1);
+            }
+        }
+
+        this.addCardToHand = function () {
+            hand.push(arguments[0]);
+        }
+
+        this.addCardsToHand = function () {
+            Array.prototype.push.apply(hand, arguments[0]);
+        }
+
+        this.handToJSON = function (){
+          return JSON.stringify(cards);
+        };
+
+        this.getSenderId = function(){
+            return senderId;
+        }
+
+        this.ToJSON = function(){
+            var obj = {};
+            obj["name"] = name;
+            obj["color"] = color;
+            obj["id"] = id;
+        }
+
+        function init(json, id, sendId){
+            color = json["color"];
+            name = json["name"];
+            me.id = id;
+            me.senderId = sendId;
+        };
+
+        this.init(arguments[0], arguments[1], arguments[2]);
+    }
+
+    function Card(){
+
+        var suits = ["â™ ", "â™¥", "â™¦", "â™£" ];
+        var ranks  = ["A", "2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K" ];
+
+        var me = this;
+        var suit;
+        var rank;
+        var ordinal;
+
+         this.ToJSON = function () {
+            return JSON.stringify(ordinal);
+        }
+
+        this.initFromOrdinal = function(ordinal){
+            var ordinalOffset;
+            me.ordinal = ordinal;
+
+            if(ordinal > 0 && ordinal <= 13){
+                ordinalOffset = 0;
+                suit = suits[ordinalOffset];
+                rank = ranks[ordinal - (13 * ordinalOffset)];
+            }
+            else if(ordinal > 13 && ordinal <= 26){
+                ordinalOffset = 1;
+                suit = suits[ordinalOffset];
+                rank = ranks[ordinal - (13 * ordinalOffset)];
+            }
+            else if(ordinal > 26 && ordinal <= 39){
+                ordinalOffset = 2;
+                suit = suits[ordinalOffset];
+                rank = ranks[ordinal - (13 * ordinalOffset)];
+            }
+            else if(ordinal > 39 && ordinal <= 52){
+                ordinalOffset = 3;
+                suit = suits[ordinalOffset];
+                rank = ranks[ordinal - (13 * ordinalOffset)];
+            }
+
+        }
+
+        me.initFromOrdinal(arguments[0]);
+
+    }
+
+    function Deck(){
+        var cards = [];
+        var me = this;
+        var rand = new MilordRandom();
+
+        this.doubleShuffle = function(){
+            me.shuffle();
+            me.shuffle();
+        }
+
+        this.shuffle = function () {
+            cards = new Array(52);
+
+            for(var i = 0; i < 52; i++)
+                cards[i] = new Card(i);
+
+            for (var i = cards.Length - 1; i > 0; i--){
+                var n = rand.Next(i + 1);
+                var temp = cards[i];
+                cards[i] = cards[n];
+                cards[n] = temp;
+            }
+        }
+    }
+
+    function Game(){
+        var name;
+
+        this.getName = function(){
+            return name;
+        }
+
+        function init(){
+            name = arguments[0];
+        };
+
+        init(arguments[0]);
+    }
+
+    function GameState(){
+        var me = this;
+        var players = [];
+        var activeCard = [];
+        var decks = [];
+        var round;
+        var castMessanger;
+        var gameHasStarted;
+        var gameType;
+
+        this.getGameTypeName = function () {
+            return gameType.getName;
+        }
+
+        this.getCastMessenger = function(){
+          return castMessanger;
+        };
+
+        this.onReceivedJoin = function(senderId, message){
+            if(!gameHasStarted) {
+
+                if(gameType == null)
+                    setGameType(message["gameType"]);
+
+                var player = new Player(message["player"], players.length, senderId);
+
+                if (players.length < 0)
+                    for (var i = 0; i < players.length; i++)
+                        castMessanger.sendPlayerJoined(players[i].getSenderId, player);
+
+                castMessanger.sendPlayerList(senderId, players);
+                players.push(player);
+            }
+        };
+
+        function setGameType(gameTypeName){
+            gameType = new Game(gameTypeName);
+        }
+
+        this.onReceivedStartGame = function(senderId, message){
+            gameHasStarted = true;
+
+            decks = new Array(1);
+            decks[0] = new Deck();
+            decks[0].shuffle();
+            var message = {};
+
+            var arrayforPlayers = [];
+
+            for (var i = 0; i < players.length; i++) {
+                players[i].addCardsToHand(7);
+                var obj = {};
+                obj["id"] = players[i].id;
+                obj["hand"] = players[i].handToJSON();
+                arrayforPlayers.push(JSON.stringify(obj));
+            }
+
+            message["players"] = JSON.stringify(arrayforPlayers);
+
+            for (var i = 0; i < players.length; i++)
+                castMessanger.sendNewRound(players[i].getSenderId(), JSON.stringify(message));
+
+
+        };
+
+        this.onReceivedEndGame = function(senderId, message){
+
+        };
+
+        this.onReceivedReadyForNewRound = function(senderId, message){
+
+        };
+
+        this.onReceivedPlayedCard = function(senderId, message){
+
+        };
+
+        this.onReceivedChangedColor = function(senderId, message){
+
+        };
+
+        this.onReceivedChangedName = function(senderId, message){
+
+        };
+
+        function init(){
+            castMessanger = new CastMessenger();
+            gameHasStarted = false;
+            round = 0;
+        }
+    }
+
+    function CastReceiver(){
+        var gameState;
+
+        function init(masterGameState){
+            gameState = masterGameState;
+
+            window.castReceiverManager = cast.receiver.CastReceiverManager.getInstance();
+            console.log('Starting Receiver Manager');
+
+            // handler for the 'ready' event
+            castReceiverManager.onReady = function(event) {
+                console.log('Received Ready event: ' + JSON.stringify(event.data));
+                window.castReceiverManager.setApplicationState("Application status is ready...");
+            };
+
+            // handler for 'senderconnected' event sends back game type if it has been set
+            castReceiverManager.onSenderConnected = function(event) {
+                console.log('Received Sender Connected event: ' + event.data);
+                console.log(window.castReceiverManager.getSender(event.data).userAgent);
+                if(!(gameState.getGameTypeName() == null))
+                    gameState.getCastMessenger().sendGameType(event.senderId, gameState.getGameTypeName());
+            };
+
+            // handler for 'senderdisconnected' event
+            castReceiverManager.onSenderDisconnected = function(event) {
+                console.log('Received Sender Disconnected event: ' + event.data);
+                if (window.castReceiverManager.getSenders().length == 0) {
+                    window.close();
+                }
+            };
+
+            // handler for 'systemvolumechanged' event
+            castReceiverManager.onSystemVolumeChanged = function(event) {
+                console.log('Received System Volume Changed event: ' + event.data['level'] + ' ' +
+                        event.data['muted']);
+            };
+
+            // create a CastMessageBus to handle messages for a custom namespace
+            window.messageBus = window.castReceiverManager.getCastMessageBus('urn:x-cast:cast.chrome.cribbage.cribbageforchromecast');
+
+            // handler for the CastMessageBus message event
+            window.messageBus.onMessage = function(event) {
+                console.log('Message [' + event.senderId + ']: ' + JSON.stringify(event.data));
+
+                var message = JSON.parse(event.data);
+                var senderId = event.senderId;
+                console.log('Message post-break [' + senderId + ']: ' + message);
+
+                if (message.command == 'join') {
+                    gameState.onReceivedJoin(senderId, message);
+                } else if (message.command == 'start_game') {
+                    gameState.onReceivedStartGame(senderId, message);
+                } else if (message.command == 'end_game') {
+                    gameState.onReceivedEndGame (senderId, message);
+                } else if (message.command == 'ready_set_new_round') {
+                    gameState.onReceivedReadyForNewRound();
+                } else if (message.command == 'play_card') {
+                    gameState.onReceivedPlayedCard(senderId, message);
+                } else if (message.command == 'change_color') {
+                    gameState.onReceivedChangedColor(senderId, message);
+                } else if (message.command == 'change_name') {
+                    gameState.onReceivedChangedName(senderId, message);
+                } else {
+                    console.log('invalid command message: ' + message.command);
+                }
+
+                // inform all senders on the CastMessageBus of the incoming message event
+                // sender message listener will be invoked
+                //window.messageBus.send(event.senderId, event.data);
+            };
+
+            // initialize the CastReceiverManager with an application status message
+            window.castReceiverManager.start({statusText: "Application is starting"});
+            console.log('Receiver Manager started');
+            cast.receiver.logger.setLevelValue(0);
+        }
+
+        init(arguments[0]);
+    }
+
+    function CastMessenger(){
+
+        this.sendPlayerJoined = function(senderId, player){
+            var jsonReturn = easyJSON("player_joined");
+            jsonReturn["player"] = player.ToJSON();
+            window.messageBus.send(senderId, JSON.stringify(jsonReturn));
+        }
+
+        this.sendGameType = function(senderId, gameType){
+            var jsonReturn = easyJSON("gametype");
+            jsonReturn["gameType"] = gameType;
+            window.messageBus.send(senderId, JSON.stringify(jsonReturn));
+        }
+
+        this.sendPlayerList = function(senderId, players){
+            var jsonReturn = easyJSON("player_in_game");
+            var arrayOfPlayers = [];
+
+            for(var i = 0; i < players.length; i++)
+                arrayOfPlayers.push(players[i].ToJSON());
+
+            jsonReturn["players"] = JSON.stringify(arrayOfPlayers);
+            window.messageBus.send(senderId, JSON.stringify(jsonReturn));
+        }
+
+        this.sendNewRound = function(senderId, message){
+            var jsonReturn = easyJSON("player_joined");
+            jsonReturn["round"] = message;
+            window.messageBus.send(senderId, JSON.stringify(jsonReturn));
+        }
+
+        this.sendDeck = function(senderId){
+
+        }
+
+        this.sendCardPlayed = function(senderId){
+
+        }
+
+        this.sendPlayerDisconnected = function(senderId){
+
+        }
+
+        this.sendRecievePlayerTurn = function(senderId){
+
+        }
+
+        this.sendEndRound = function(senderId){
+
+        }
+
+        this.getBasicJSON = function(commandName){
+            return easyJSON(commandName);
+        }
+
+        function easyJSON(commandName){
+            var easyJSONObject = {};
+            easyJSONObject["command"] = commandName;
+            return easyJSONObject;
+        }
+
+    }
+
+    function MilordRandom(){
+
+        this.Next = function (max) {
+            var min = 0;
+            // Create byte array and fill with 1 random number
+            var byteArray = new Uint8Array(1);
+            window.crypto.getRandomValues(byteArray);
+
+            var range = max - min + 1;
+            var max_range = 256;
+            if (byteArray[0] >= Math.floor(max_range / range) * range)
+                return getRandomInt(min, max);
+            return min + (byteArray[0] % range);
+        }
+
+    }
+</script>
+<script type="text/javascript">
+    console.log('Pre-Pre-Run');
+    var playersHands = new Array();
+    var playerOne = -1;
+    var playerTwo = -1;
+    var playerThree = -1;
+    var currentScore = 0;
+    var p1rotateDegrees = 0;
+    var p1marginTopShift = 0;
+    var p1marginLeftShift = 0;
+    var p2rotateDegrees = 0;
+    var p2marginTopShift = 0;
+    var p2marginLeftShift = 0;
+
+    window.onload = function() {
+        var div = document.createElement("asdf");
+        div.innerHTML = "10<br>C";
+        div.className = "card cardPlayerOne";
+        //div.style.transform = 'rotate(' + 40 + 'deg)';
+        var currentDiv = document.getElementById("main");
+        document.body.insertBefore(div, currentDiv);
+
+        var div2 = document.createElement("aaa");
+        div2.innerHTML = "8<br>C";
+        div2.className = "card cardPlayerOne";
+        div2.style.transform = 'rotate(' + 20 + 'deg)';
+        div2.style.top = 35 + "px";
+        div2.style.left = 20 + "px";
+        document.body.insertBefore(div2, currentDiv);
+
+        var div3 = document.createElement("fdsa");
+        div3.innerHTML = "3<br>D";
+        div3.className = "card cardPlayerTwo";
+        //div3.style.transform = 'rotate(' + 20 + 'deg)';
+        document.body.insertBefore(div3, currentDiv);
+
+        var div4 = document.createElement("adsdfs");
+        div4.innerHTML = "9<br>S";
+        div4.className = "card cardPlayerOne";
+        var currentPosition = parseInt(div4.style.top);
+        div4.style.transform = 'rotate(' + 35 + 'deg)';
+        div4.style.top = 70 + "px";
+        div4.style.left = 35 + "px";
+        document.body.insertBefore(div4, currentDiv);
+
+        console.log('Pre-Run');
+
+        var gameState = new GameState();
+        var castRec = new CastReceiver(gameState);
+
+    };
+
+    function initialSetupGame() {
+        console.log('****InitialSetupGame****');
+
+        $(".card").remove();
+
+        window.messageBus.send(playerOne.senderId, JSON.stringify({'command': 'deal'}));
+        //window.messageBus.send(playerTwo.senderId, {'event': 'prep'});
+    }
+
+    function onReceivedNextPlayerTurn (senderId, message) {
+        console.log('****OnNextPlayerTurn****');
+
+        passToOtherPlayer(senderId, message);
+    }
+
+    function onJoin(senderId, message) {
+        console.log('****OnJoin****');
+
+        if (this.playerOne == -1) {
+            playerOne = {};
+            playerOne.name = message.name;
+            playerOne.senderId = senderId;
+            document.getElementById('playerOneScore').innerText = playerOne.name + "'s Score: 0";
+        } else if (this.playerTwo == -1) {
+            playerTwo = new Object();
+            playerTwo.name = message.name;
+            playerTwo.senderId = senderId;
+            document.getElementById('playerTwoScore').innerText = playerTwo.name + "'s Score: 0";
+            window.messageBus.send(playerTwo.senderId, JSON.stringify({command: 'prep'}));
+        } else {
+            console.log('full game');
+            sendError(senderId, 'Game is full');
+            return;
+        }
+
+        if (this.playerOne != -1 && this.playerTwo != -1) {
+            initialSetupGame();
+        }
+    };
+
+    function onReceivedPrepNewPlay() {
+        console.log ('****OnPrepNewPlay****');
+        currentScore = 0;
+        document.getElementById('playScore').innerText = "Current Count: " + currentScore;
+        $(".cardPlayerTwo").remove();
+        $(".cardPlayerOne").remove();
+        passToOtherPlayer(senderId, message);
+    };
+
+    function onRecievedHands(senderId, message) {
+        console.log('****OnRecievedHands****');
+        playerHands = (message.hands);
+        passToOtherPlayer (senderId, message);
+    };
+
+    function onRecievedCardPlayed(senderId, message) {
+        console.log('****onRecievedCardPlayed****');
+
+        drawPlayCard(senderId, message.card_played);
+
+        if (playerOne.senderId == senderId) {
+            document.getElementById('playerTurn').innerText = "Current player: " + playerTwo.name;
+        } /*else if (playerTwo.senderId == senderId) {
+         document.getElementById('playerTurn').innerText = "Current player: " + playerThree.name;
+         window.messageBus.send(playerThree.senderId, {event: 'your_turn'});
+         } */else {
+            document.getElementById('playerTurn').innerText = "Current player: " + playerOne.name;
+        }
+
+        passToOtherPlayer(senderId, message);
+        passToOtherPlayer(senderId, {'command': 'your_turn'});
+    }
+
+    function onRecievedScores (senderId, message) {
+        console.log('****onRecievedScore****');
+        var x = parseInt(message);
+        console.log('score value: ' + x);
+        passToOtherPlayer (senderId, message)
+    };
+
+    function onRecievedScoresDuringPlay (senderId, message) {
+        console.log('****onRecievedScoresDuringPlay****');
+        currentScore = parseInt(message.scores_during_play);
+        console.log('score value: ' + currentScore);
+        document.getElementById('playScore').innerText = "Current Count: " + currentScore;
+        passToOtherPlayer (senderId, message);
+    };
+
+    //depreceate to onRecievedPegPoints
+    function onRecievedScoresDuringShow (senderId, message) {
+        console.log('****onRecievedScoresDuringShow****');
+
+        if (playerOne.senderId == senderId) {
+            var x = parseInt(message.scores_during_play);
+            //document.getElementById('playerOneScore').innerText =
+        }
+        passToOtherPlayer (senderId, message);
+    };
+
+    function onRecievedCutCard (senderId, message) {
+        console.log('****onRecievedCutCard****');
+        drawCutCard(message.cut_card);
+        passToOtherPlayer(senderId, message);
+    };
+
+    function onRecievedPegPoints(senderId, message) {
+        console.log('****onRecievedPegPoints****');
+
+        if (playerOne.senderId == senderId) {
+            playerOne.score += parseInt(message.peg_points);
+            document.getElementById('playerOneScore').innerText = playerOne.name + "'s Score: " + playerOne.score;
+        } else if (playerTwo.senderId == senderId) {
+            playerTwo.score += parseInt(message.peg_points);
+            document.getElementById('playerTwoScore').innerText = playerTwo.name + "'s Score: " + playerTwo.score;
+        }
+    };
+
+    function onRecieveNewSet() {
+        $(".cardPlayerOne").remove();
+        $(".cardPlayerTwo").remove();
+
+        window.messageBus.send(playerOne.senderId, JSON.stringify({'command': 'new_set'}));
+        window.messageBus.send(playerTwo.senderId, JSON.stringify({'command': 'new_set'}));
+    }
+
+    function onReceivedCouldNotPlay(senderId, message) {
+        passToOtherPlayer(senderId, message);
+    }
+
+    function passToOtherPlayer (senderId, message) {
+        if (senderId == playerOne.senderId) {
+            window.messageBus.send(playerTwo.senderId, JSON.stringify(message));
+        } else {
+            window.messageBus.send(playerOne.senderId, JSON.stringify(message));
+        }
+    };
+
+    function drawPlayCard(senderId, card) {
+        var div = document.createElement("cutCard");
+        div.innerHTML = card.rank + "<br />" + card.suit;
+
+        if (playerOne.senderId == senderId) {
+            div.className = "card cardPlayerOne";
+            div.style.transform = 'rotate(' + p1rotateDegrees + 'deg)';
+            div.style.top = p1marginTopShift + "px";
+            div.style.left = p1marginLeftShift + "px";
+            p1rotateDegrees += 17;
+            p1marginTopShift += 35;
+            p1marginLeftShift += 17;
+        } else {
+            div.className = "card cardPlayerTwo";
+            div.style.transform = 'rotate(' + p2rotateDegrees + 'deg)';
+            div.style.top = p2marginTopShift + "px";
+            div.style.left = p2marginLeftShift + "px";
+            p2rotateDegrees += 17;
+            p2marginTopShift += 35;
+            p2marginLeftShift += 17;
+        }
+
+        var currentDiv = document.getElementById("main");
+        document.body.insertBefore(div, currentDiv);
+
+        var gameState = new GameState();
+        var castReceiver = new CastReceiver(gameState);
+    }
+
+    function drawCutCard(card) {
+        var div = document.createElement("cutCard");
+        div.innerHTML = card.rank + "<br />" + card.suit;
+        div.className = "card cardCut";
+        var currentDiv = document.getElementById("main");
+        document.body.insertBefore(div, currentDiv);
+
+        var label = document.createElement("cutCardLabel");
+        label.innerHTML = "<h3>Cut card:</h3>";
+        label.id = "cutCardLabel";
+        label.className = "cutCardLabel";
+        document.body.insertBefore(label, currentDiv);
+    }
+
+    // utility function to display the text message in the input field
+    function displayText(id, text) {
+        console.log(text);
+        document.getElementById(id).innerHTML=text;
+        window.castReceiverManager.setApplicationState(text);
+    };
+
+    function addToArray(arrayToAdd){
+        cardsArray.push(arrayToAdd);
+    };
+
+
+</script>
+</body>
+</html>
